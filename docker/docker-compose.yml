@@ -50,6 +50,31 @@ services:
     restart: unless-stopped
 
   # ========================================================
+  # API Profile (REST API trả audio WAV — all-in-one)
+  # ========================================================
+  api:
+    profiles: ["api"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: vieneu-tts-api
+    ports:
+      - "${API_PORT:-8014}:8014"
+    environment:
+      - HF_HOME=${HF_HOME:-/root/.cache/huggingface}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # ========================================================
   # GPU Profile (Gradio App)
   # ========================================================
   gpu:

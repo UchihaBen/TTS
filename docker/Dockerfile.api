@@ -1,0 +1,40 @@
+FROM nvidia/cuda:12.8.0-runtime-ubuntu24.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    HF_HOME=/root/.cache/huggingface \
+    PATH="/workspace/.venv/bin:$PATH"
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    python3.12 \
+    python3.12-dev \
+    build-essential \
+    git \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    mv /root/.local/bin/uv /usr/local/bin/uv && \
+    mv /root/.local/bin/uvx /usr/local/bin/uvx
+
+WORKDIR /workspace
+
+# Copy requirements first (cache layer)
+COPY pyproject.toml uv.lock ./
+RUN uv sync --no-dev --group gpu --no-install-project
+
+# Copy source code
+COPY . .
+
+# Install project
+RUN uv sync --no-dev --group gpu
+
+EXPOSE 8002
+
+# Chạy API TTS (all-in-one, load model trực tiếp)
+CMD ["uv", "run", "python", "apps/api_tts.py"]
